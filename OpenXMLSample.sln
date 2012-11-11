@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.DocumentGenerator", "Sample.DocumentGenerator\Sample.DocumentGenerator.csproj", "{37C1ABB4-FEBD-4644-940D-42A3F4AE2B2C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.DocumentGenerator.Web.MVC", "Sample.DocumentGenerator.Web.MVC\Sample.DocumentGenerator.Web.MVC.csproj", "{D8422479-7752-4F89-9E56-9F53E2203BF1}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{37C1ABB4-FEBD-4644-940D-42A3F4AE2B2C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{37C1ABB4-FEBD-4644-940D-42A3F4AE2B2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{37C1ABB4-FEBD-4644-940D-42A3F4AE2B2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{37C1ABB4-FEBD-4644-940D-42A3F4AE2B2C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D8422479-7752-4F89-9E56-9F53E2203BF1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D8422479-7752-4F89-9E56-9F53E2203BF1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D8422479-7752-4F89-9E56-9F53E2203BF1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D8422479-7752-4F89-9E56-9F53E2203BF1}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

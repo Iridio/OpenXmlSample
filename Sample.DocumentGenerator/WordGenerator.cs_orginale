@@ -1,0 +1,151 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.IO;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
+using DocumentFormat.OpenXml;
+
+namespace Sample.DocumentGenerator
+{
+  public class WordGenerator : IDocumentGenerator
+  {
+    internal enum DocumentSection { Main, Header, Footer };
+
+    public byte[] GenerateDocument(IDictionary<string, string> valori, string fileName)
+    {
+      if (valori == null)
+        throw new ArgumentException("Missing dictionary values");
+      if (!File.Exists(fileName))
+        throw new ArgumentException("File \"" + fileName + "\" do not exists");
+      string tempFileName = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".docx");
+      return CreateFile(valori, fileName, tempFileName);
+    }
+
+    internal byte[] CreateFile(IDictionary<string, string> valori, string fileName, string tempFileName)
+    {
+      File.Copy(fileName, tempFileName);
+      if (!File.Exists(tempFileName))
+        throw new ArgumentException("Unable to create file: " + tempFileName);
+
+      using (WordprocessingDocument doc = WordprocessingDocument.Open(tempFileName, true))
+      {
+        if (doc.MainDocumentPart.HeaderParts != null)
+          foreach (var header in doc.MainDocumentPart.HeaderParts)
+            ProcessBookmarksPart(valori, DocumentSection.Header, header);
+
+        ProcessBookmarksPart(valori, DocumentSection.Main, doc.MainDocumentPart);
+
+        if (doc.MainDocumentPart.FooterParts != null)
+          foreach (var footer in doc.MainDocumentPart.FooterParts)
+            ProcessBookmarksPart(valori, DocumentSection.Footer, footer);
+      }
+      byte[] result = null;
+      if (File.Exists(tempFileName))
+      {
+        result = File.ReadAllBytes(tempFileName);
+        File.Delete(tempFileName);
+      }
+      return result;
+    }
+
+    internal static void ProcessBookmarksPart(IDictionary<string, string> valori, DocumentSection documentSection, object section)
+    {
+      IEnumerable<BookmarkStart> bookmarks = null;
+      switch (documentSection)
+      {
+        case DocumentSection.Main:
+          {
+            bookmarks = ((MainDocumentPart)section).Document.Body.Descendants<BookmarkStart>();
+            break;
+          }
+        case DocumentSection.Header:
+          {
+            bookmarks = ((HeaderPart)section).RootElement.Descendants<BookmarkStart>();
+            break;
+          }
+        case DocumentSection.Footer:
+          {
+            bookmarks = ((FooterPart)section).RootElement.Descendants<BookmarkStart>();
+            break;
+          }
+      }
+      foreach (BookmarkStart bmStart in bookmarks)
+      {
+        if (valori.ContainsKey(bmStart.Name))
+        {
+          string bmText = valori[bmStart.Name];
+          BookmarkEnd bmEnd = null;
+          switch (documentSection)
+          {
+            case DocumentSection.Main:
+              {
+                bmEnd = (from b in ((MainDocumentPart)section).Document.Body.Descendants<BookmarkEnd>() where b.Id == bmStart.Id.ToString() select b).FirstOrDefault();
+                break;
+              }
+            case DocumentSection.Header:
+              {
+                bmEnd = (from b in ((HeaderPart)section).RootElement.Descendants<BookmarkEnd>() where b.Id == bmStart.Id.ToString() select b).FirstOrDefault();
+                break;
+              }
+            case DocumentSection.Footer:
+              {
+                bmEnd = (from b in ((FooterPart)section).RootElement.Descendants<BookmarkEnd>() where b.Id == bmStart.Id.ToString() select b).FirstOrDefault();
+                break;
+              }
+          }
+          if (bmEnd != null)
+          {
+            RunProperties rProp = null;
+            if (bmStart.Parent.Descendants<Run>() != null)
+              rProp = (from rp in bmStart.Parent.Descendants<Run>() where rp.RunProperties != null select rp.RunProperties).FirstOrDefault();
+            if (bmStart.PreviousSibling<Run>() == null && bmEnd.ElementsAfter() != null && bmEnd.ElementsAfter().Where(e => e.GetType() == typeof(Run)).Count() == 0)
+            {
+              bmStart.Parent.RemoveAllChildren<Run>();
+            }
+            else
+            {
+              var list = (from r in bmStart.ElementsAfter() where r.IsBefore(bmEnd) select r).ToList();
+              RunProperties trRun = (from rp in list where rp.GetType() == typeof(Run) && ((Run)rp).RunProperties != null select ((Run)rp).RunProperties).FirstOrDefault();
+              if (trRun != null)
+                rProp = (RunProperties)trRun.Clone();
+              for (int n = list.Count(); n > 0; n--)
+                list[n - 1].Remove();
+            }
+            if (!string.IsNullOrEmpty(bmText) && bmText.Contains(Environment.NewLine))
+            {
+              OpenXmlElement sliblingElement = bmStart.Parent.PreviousSibling();
+              OpenXmlElement insertElement = sliblingElement;
+              if (sliblingElement == null)
+                sliblingElement = bmStart.Parent.Parent;
+              //bmStart.Parent.Remove();
+              var rows = bmText.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
+              foreach (string row in rows)
+              {
+                Paragraph np = new Paragraph();
+                Run nRun = new Run();
+                if (rProp != null)
+                  nRun.RunProperties = (RunProperties)rProp.Clone();
+                nRun.AppendChild<Text>(new Text() { Text = row });
+                np.AppendChild<Run>(nRun);
+                if (insertElement.Parent != null)
+                  insertElement.InsertAfterSelf(np);
+                else
+                  insertElement.Append(np);
+                insertElement = np;
+              }
+            }
+            else
+            {
+              Run nRun = new Run();
+              if (rProp != null)
+                nRun.RunProperties = (RunProperties)rProp.Clone();
+              nRun.Append(new Text() { Text = bmText });
+              bmStart.InsertAfterSelf(nRun);
+            }
+          }
+        }
+      }
+    }
+  }
+}
